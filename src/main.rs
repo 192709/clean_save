@@ -34,14 +34,14 @@ fn main() {
 
     let given_date = now.checked_sub_months(chrono::Months::new(1)).unwrap();
     for i in 2..6 {
-        let fst_date = NaiveDate::from_ymd_opt(given_date.year() - i, 1, 1).unwrap();
+        let fst_date = NaiveDate::from_ymd_opt(given_date.year() - i, 6, 30).unwrap();
         to_be_hold_endings.push(get_ending(fst_date));
-        let snd_date = NaiveDate::from_ymd_opt(given_date.year() - i, 7, 1).unwrap();
+        let snd_date = NaiveDate::from_ymd_opt(given_date.year() - i, 12, 31).unwrap();
         to_be_hold_endings.push(get_ending(snd_date));
     }
 
     for i in 6..12 {
-        let fst_date = NaiveDate::from_ymd_opt(given_date.year() - i, 1, 1).unwrap();
+        let fst_date = NaiveDate::from_ymd_opt(given_date.year() - i, 12, 31).unwrap();
         to_be_hold_endings.push(get_ending(fst_date));
     }
 
