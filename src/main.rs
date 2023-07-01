@@ -1,3 +1,8 @@
+use std::{
+    fs::{self, DirEntry},
+    path::PathBuf,
+};
+
 use chrono::{format, Datelike, Duration, Local, NaiveDate};
 
 const POSTFIX: &str = "tar.xz";
@@ -9,6 +14,7 @@ fn main() {
         now.month(),
         now.day()
     );
+    // for the first 30 days
     let mut to_be_hold_endings = Vec::new();
     for i in 1..30 {
         let given_date = now.checked_sub_days(chrono::Days::new(i)).unwrap();
@@ -16,6 +22,7 @@ fn main() {
         to_be_hold_endings.push(get_ending(given_date));
     }
 
+    // for the secont´d to the tenth MONTH
     for i in 2..10 {
         let given_date = now.checked_sub_months(chrono::Months::new(i)).unwrap();
         let fst_date = NaiveDate::from_ymd_opt(given_date.year(), given_date.month(), 1).unwrap();
@@ -25,13 +32,14 @@ fn main() {
         let trd_date = NaiveDate::from_ymd_opt(given_date.year(), given_date.month(), 20).unwrap();
         to_be_hold_endings.push(get_ending(trd_date));
     }
-
+    // i for the year 2 from now
     for i in 12..24 {
         let given_date = now.checked_sub_months(chrono::Months::new(i)).unwrap();
         let fst_date = NaiveDate::from_ymd_opt(given_date.year(), given_date.month(), 1).unwrap();
         to_be_hold_endings.push(get_ending(fst_date));
     }
 
+    // for the years 2 to 5 including
     let given_date = now.checked_sub_months(chrono::Months::new(1)).unwrap();
     for i in 2..6 {
         let fst_date = NaiveDate::from_ymd_opt(given_date.year() - i, 6, 30).unwrap();
@@ -39,13 +47,20 @@ fn main() {
         let snd_date = NaiveDate::from_ymd_opt(given_date.year() - i, 12, 31).unwrap();
         to_be_hold_endings.push(get_ending(snd_date));
     }
-
+    // 6 years and older
     for i in 6..12 {
         let fst_date = NaiveDate::from_ymd_opt(given_date.year() - i, 12, 31).unwrap();
         to_be_hold_endings.push(get_ending(fst_date));
     }
 
-    dbg!(to_be_hold_endings);
+    dbg!(&to_be_hold_endings);
+
+    let (keep, remove) = create_lists(to_be_hold_endings);
+    println!("keeeeeep:");
+
+    dbg!(&keep);
+    println!("remove :");
+    dbg!(&remove);
 }
 
 fn get_ending(given_date: impl Datelike) -> String {
@@ -56,4 +71,30 @@ fn get_ending(given_date: impl Datelike) -> String {
         given_date.day(),
         POSTFIX
     )
+}
+fn create_lists(endings: Vec<String>) -> (Vec<DirEntry>, Vec<DirEntry>) {
+    let mut keep = vec![];
+    let mut remove = vec![];
+
+    let paths = fs::read_dir("./").unwrap();
+
+    for path in paths {
+        let file = path.unwrap();
+        println!("Name: {}", &file.path().display());
+        let filename = file.path();
+        let mut found = false;
+        for ending in endings.iter() {
+            if filename.ends_with(ending) {
+                found = true;
+                break;
+            }
+        }
+        if found {
+            keep.push(file)
+        } else {
+            remove.push(file);
+        }
+    }
+
+    (keep, remove)
 }
