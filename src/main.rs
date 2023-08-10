@@ -1,11 +1,11 @@
+use chrono::{DateTime, Datelike, Duration, Local};
 use std::{
+    collections::HashSet,
     fs::{self, DirEntry},
-    path::PathBuf,
 };
 
-use chrono::{format, Datelike, Duration, Local, NaiveDate};
-
 const POSTFIX: &str = "tar.xz";
+
 fn main() {
     let now = Local::now();
     println!(
@@ -14,87 +14,102 @@ fn main() {
         now.month(),
         now.day()
     );
-    // for the first 30 days
-    let mut to_be_hold_endings = Vec::new();
-    for i in 1..30 {
-        let given_date = now.checked_sub_days(chrono::Days::new(i)).unwrap();
-        // println!("{ending}");
-        to_be_hold_endings.push(get_ending(given_date));
-    }
+    let to = now.year();
 
-    // for the secont´d to the tenth MONTH
-    for i in 2..10 {
-        let given_date = now.checked_sub_months(chrono::Months::new(i)).unwrap();
-        let fst_date = NaiveDate::from_ymd_opt(given_date.year(), given_date.month(), 1).unwrap();
-        to_be_hold_endings.push(get_ending(fst_date));
-        let snd_date = NaiveDate::from_ymd_opt(given_date.year(), given_date.month(), 10).unwrap();
-        to_be_hold_endings.push(get_ending(snd_date));
-        let trd_date = NaiveDate::from_ymd_opt(given_date.year(), given_date.month(), 20).unwrap();
-        to_be_hold_endings.push(get_ending(trd_date));
-    }
-    // i for the year 2 from now
-    for i in 12..24 {
-        let given_date = now.checked_sub_months(chrono::Months::new(i)).unwrap();
-        let fst_date = NaiveDate::from_ymd_opt(given_date.year(), given_date.month(), 1).unwrap();
-        to_be_hold_endings.push(get_ending(fst_date));
-    }
+    let mut to_be_hold = HashSet::new();
 
-    // for the years 2 to 5 including
-    let given_date = now.checked_sub_months(chrono::Months::new(1)).unwrap();
-    for i in 2..6 {
-        let fst_date = NaiveDate::from_ymd_opt(given_date.year() - i, 6, 30).unwrap();
-        to_be_hold_endings.push(get_ending(fst_date));
-        let snd_date = NaiveDate::from_ymd_opt(given_date.year() - i, 12, 31).unwrap();
-        to_be_hold_endings.push(get_ending(snd_date));
-    }
-    // 6 years and older
-    for i in 6..12 {
-        let fst_date = NaiveDate::from_ymd_opt(given_date.year() - i, 12, 31).unwrap();
-        to_be_hold_endings.push(get_ending(fst_date));
-    }
+    let from = now.year() - 12;
 
-    dbg!(&to_be_hold_endings);
+    let year_strings = all_years_from_to(from, to);
+    to_be_hold.extend(&year_strings);
 
-    let (keep, remove) = create_lists(to_be_hold_endings);
+    let from = now.year() - 4;
+    let quater_strings = all_quartals_from_to(from, to);
+    to_be_hold.extend(&quater_strings);
+
+    let from = now.year() - 2;
+    let month_strings = all_months_from_to(from, to);
+    to_be_hold.extend(&month_strings);
+
+    let last_1180_days = all_past_180_days(&now);
+    to_be_hold.extend(&last_1180_days);
+
+    dbg!(&to_be_hold);
+
+    // let (keep, remove) = create_lists(to_be_hold_endings);
     println!("keeeeeep:");
-
-    dbg!(&keep);
-    println!("remove :");
-    dbg!(&remove);
 }
 
-fn get_ending(given_date: impl Datelike) -> String {
-    format!(
-        "{:04}-{:02}-{:02}.{}",
-        given_date.year(),
-        given_date.month(),
-        given_date.day(),
-        POSTFIX
-    )
+// fn create_lists(endings: Vec<String>) -> Result<(Vec<DirEntry>, Vec<DirEntry>), ()> {
+//     let mut keep = vec![];
+//     let mut remove = vec![];
+
+//     let paths = fs::read_dir("./").unwrap();
+
+//     for path in paths {
+//         let file = path.unwrap();
+//         println!("Name: {}", &file.path().display());
+//         let filename = file.path().as_os_str().to_str().ok_or_else()?;
+//         let mut found = false;
+//         for ending in endings.iter() {
+//             if filename.ends_with(ending.as_str()) {
+//                 found = true;
+//                 break;
+//             }
+//         }
+//         if found {
+//             keep.push(file)
+//         } else {
+//             remove.push(file);
+//         }
+//     }
+
+//     Ok((keep, remove))
+// }
+
+//  Up to today
+fn all_years_from_to(from: i32, to: i32) -> HashSet<String> {
+    let mut res = HashSet::new();
+    let to_plus_one = to + 1;
+    for year in from..to_plus_one {
+        let year_str = format!("{:0>4}-12-01", year);
+        res.insert(year_str);
+    }
+    res
 }
-fn create_lists(endings: Vec<String>) -> (Vec<DirEntry>, Vec<DirEntry>) {
-    let mut keep = vec![];
-    let mut remove = vec![];
 
-    let paths = fs::read_dir("./").unwrap();
-
-    for path in paths {
-        let file = path.unwrap();
-        println!("Name: {}", &file.path().display());
-        let filename = file.path();
-        let mut found = false;
-        for ending in endings.iter() {
-            if filename.ends_with(ending) {
-                found = true;
-                break;
-            }
-        }
-        if found {
-            keep.push(file)
-        } else {
-            remove.push(file);
+fn all_quartals_from_to(from: i32, to: i32) -> HashSet<String> {
+    let mut res = HashSet::new();
+    let to_plus_one = to + 1;
+    for year in from..to_plus_one {
+        for quater_month in [1, 4, 7, 10] {
+            let year_str = format!("{:0>4}-{:0>2}-01", year, quater_month);
+            res.insert(year_str);
         }
     }
+    res
+}
+fn all_months_from_to(from: i32, to: i32) -> HashSet<String> {
+    let mut res = HashSet::new();
+    let to_plus_one = to + 1;
+    for year in from..to_plus_one {
+        for month in 1..13 {
+            let year_str = format!("{:0>4}-{:0>2}-01", year, month);
+            res.insert(year_str);
+        }
+    }
+    res
+}
 
-    (keep, remove)
+fn all_past_180_days(end_date: &DateTime<Local>) -> HashSet<String> {
+    let mut res = HashSet::new();
+    for i in 0..180 {
+        let rel_date = end_date.clone() - Duration::days(i);
+        let year = rel_date.year();
+        let month = rel_date.month();
+        let day = rel_date.day();
+        let year_str = format!("{:0>4}-{:0>2}-{:0>2}", year, month, day);
+        res.insert(year_str);
+    }
+    res
 }
